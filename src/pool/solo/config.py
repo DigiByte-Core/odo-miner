@@ -50,6 +50,7 @@ params = {}
 def init(argv):
     parser = argparse.ArgumentParser(description="Solo-mining pool.")
     parser.add_argument("-t", "--testnet", help="use testnet params", action="store_true")
+    parser.add_argument("-st", help="shows next target", action="store_true")
     parser.add_argument("-H", "--host", help="rpc host", dest="rpc_host", default="localhost")
     parser.add_argument("-p", "--port", help="rpc port", dest="rpc_port", type=int)
     parser.add_argument("--user", help="rpc user (discouraged, --auth is preferred)")
@@ -78,6 +79,8 @@ def init(argv):
             parser.error("invalid address")
     params["cbscript"] = cbscript.data
     params["cbstring"] = args.coinbase
+    
+    params["swtarget"] =  True if args.st else False
     
     if args.user and args.password:
         if args.auth:
