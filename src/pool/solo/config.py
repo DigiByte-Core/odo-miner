@@ -80,7 +80,7 @@ def init(argv):
     params["cbscript"] = cbscript.data
     params["cbstring"] = args.coinbase
     
-    params["swtarget"] =  args.st
+    params["swtarget"] =  args.show_target
     
     if args.user and args.password:
         if args.auth:

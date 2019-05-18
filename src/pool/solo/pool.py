@@ -35,7 +35,7 @@ ENDC = '\033[0m'
 BOLD = '\033[1m'
 UNDERLINE = '\033[4m'
 
-threadcount = 0
+minercount = 0
 
 class GetTemplate(threading.Thread):
     def __init__(self, callback):
@@ -44,10 +44,8 @@ class GetTemplate(threading.Thread):
         self.shutdown_flag = threading.Event()
         self.longpollid = None
         self.last_errno = None
-    
+
     def run(self):
-        global threadcount
-        threadcount += 1
         print('%s%s Thread #%s started (GetTemplate)%s' % (time.strftime("[%Y-%M-%d %H:%M:%S]"), VIOLET, self.ident, ENDC))
         while not self.shutdown_flag.is_set():
             try:
@@ -67,7 +65,6 @@ class GetTemplate(threading.Thread):
                     self.last_errno = e.errno
                     print("%s%s %s (errno %d)" % (RED, time.strftime("[%Y-%M-%d %H:%M:%S]"), e.strerror, e.errno))
                 time.sleep(1)
-        threadcount -= 1
         print('%s%s Thread #%s stopped (GetTemplate)%s' % (time.strftime("[%Y-%M-%d %H:%M:%S]"), VIOLET, self.ident, ENDC))
 
 class Manager(threading.Thread):
@@ -88,7 +85,7 @@ class Manager(threading.Thread):
     def remove_miner(self, miner):
         with self.cond:
             self.miners.remove(miner)
-    
+
     def push_template(self, template):
         with self.cond:
             if template is None:
@@ -99,10 +96,8 @@ class Manager(threading.Thread):
             for miner in self.miners:
                 miner.next_refresh = 0
             self.cond.notify()
-    
+
     def run(self):
-        global threadcount
-        threadcount += 1
         print('%s%s Thread #%s started (Manager)%s' % (time.strftime("[%Y-%M-%d %H:%M:%S]"), VIOLET, self.ident, ENDC))
         while not self.shutdown_flag.is_set():
             with self.cond:
@@ -115,8 +110,7 @@ class Manager(threading.Thread):
                     next_refresh = min(next_refresh, miner.next_refresh)
                 wait_time = max(0, next_refresh - time.time())
                 self.cond.wait(wait_time)
-        threadcount -= 1
-        print('%s%s Thread #%s stopped (Manager)%s' % (time.strftime("[%Y-%M-%d %H:%M:%S]"), VIOLET, self.ident, ENDC))            
+        print('%s%s Thread #%s stopped (Manager)%s' % (time.strftime("[%Y-%M-%d %H:%M:%S]"), VIOLET, self.ident, ENDC))
 
 class Miner(threading.Thread):
     def __init__(self, conn, manager):
@@ -147,13 +141,13 @@ class Miner(threading.Thread):
                 self.work_items.insert(0, (work, template, extra_nonce))
                 if len(self.work_items) > 2:
                     self.work_items.pop()
-            self.next_refresh = time.time() + self.refresh_interval       
+            self.next_refresh = time.time() + self.refresh_interval
         if (self.lastodo != template.odo_key):
             self.lastodo = template.odo_key
             print("%s%s ODOkey %s>>> %s <<<" % (time.strftime("[%Y-%M-%d %H:%M:%S]"),GREEN + BOLD, ENDC, self.lastodo))
         if (self.lasttarget != template.target and config.get("swtarget")):
             self.lasttarget = template.target
-            print("%s%s Target %s%s" % (time.strftime("[%Y-%M-%d %H:%M:%S]"), BLUE, ENDC, self.lasttarget))           
+            print("%s%s Target %s%s" % (time.strftime("[%Y-%M-%d %H:%M:%S]"), BLUE, ENDC, self.lasttarget))
         try:
             self.send(workstr)
         except socket.error as e:
@@ -181,8 +175,8 @@ class Miner(threading.Thread):
             return "error"
 
     def run(self):
-        global threadcount
-        threadcount += 1
+        global minercount
+        minercount += 1
         print('%s%s Thread #%s started (Miner)%s' % (time.strftime("[%Y-%M-%d %H:%M:%S]"), VIOLET, self.ident, ENDC))
         while not self.shutdown_flag.is_set():
             try:
@@ -200,7 +194,7 @@ class Miner(threading.Thread):
                 break
 
         # Clean shutdown
-        threadcount -= 1
+        minercount -= 1
         print('%s%s Thread #%s stopped (Miner)%s' % (time.strftime("[%Y-%M-%d %H:%M:%S]"), VIOLET, self.ident, ENDC))
         self.manager.remove_miner(self)
         self.conn.close()
@@ -212,11 +206,11 @@ def service_start():
     print('*******************************************************************' + ENDC)
   
 def service_shutdown(signum, frame):
-    global threadcount
+    global minercount
     print(RED + ' KeyboardInterrupt' + ENDC)
     print(GREEN + '*******************************************************************')
     print('***    Shutting down Pool, please stop your Miner to finish     ***')
-    if threadcount < 3:
+    if minercount < 1:
         print('***    ' + YELLOW +'No Miner running.' + GREEN + '                                        ***')
     print('*******************************************************************' + ENDC)
     raise ServiceExit
@@ -253,4 +247,3 @@ if __name__ == '__main__':
         # Set the shutdown flag on each thread to trigger a clean shutdown
         manager.shutdown_flag.set()
         gettemplate.shutdown_flag.set()
-    
