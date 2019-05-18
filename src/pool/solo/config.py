@@ -50,7 +50,7 @@ params = {}
 def init(argv):
     parser = argparse.ArgumentParser(description="Solo-mining pool.")
     parser.add_argument("-t", "--testnet", help="use testnet params", action="store_true")
-    parser.add_argument("-st", help="shows next target", action="store_true")
+    parser.add_argument("-st", "--show_target", help="shows next target", action="store_true")
     parser.add_argument("-H", "--host", help="rpc host", dest="rpc_host", default="localhost")
     parser.add_argument("-p", "--port", help="rpc port", dest="rpc_port", type=int)
     parser.add_argument("--user", help="rpc user (discouraged, --auth is preferred)")
